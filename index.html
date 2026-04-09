@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐍 Snake Matemático</title>
+<link rel="manifest" href="snake-manifest.json">
+<meta name="theme-color" content="#00ff88">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Snake Mat.">
+<link rel="apple-touch-icon" href="snake-icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a1a;
+    --panel: #10102a;
+    --border: #2a2a5a;
+    --green: #00ff88;
+    --yellow: #ffe94d;
+    --red: #ff4d6d;
+    --blue: #4dc8ff;
+    --purple: #c084fc;
+    --orange: #ff9f43;
+    --white: #f0f0ff;
+    --dim: #6060a0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* ── BLOQUEIO PARA PC ── */
+  #pc-blocker {
+    position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; color: white; padding: 20px; font-family: 'Press Start 2P';
+  }
+  @media (min-width: 1025px) { #pc-blocker { display: flex; } }
+
+  body {
+    background: var(--bg);
+    font-family: 'Nunito', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    padding: 16px 10px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 15% 20%, #ffffff18, transparent),
+      radial-gradient(1px 1px at 40% 70%, #ffffff10, transparent),
+      radial-gradient(1px 1px at 70% 30%, #ffffff14, transparent),
+      radial-gradient(1px 1px at 85% 80%, #ffffff10, transparent),
+      radial-gradient(1px 1px at 55% 55%, #ffffff12, transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  h1 {
+    font-family: 'Press Start 2P', monospace;
+    color: var(--green);
+    font-size: clamp(11px, 2.8vw, 20px);
+    text-align: center;
+    margin: 0 0 4px;
+    text-shadow: 0 0 20px var(--green), 0 0 50px #00ff8840;
+    letter-spacing: 2px;
+    position: relative;
+    z-index: 1;
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { text-shadow: 0 0 20px var(--green), 0 0 50px #00ff8840; }
+    50%       { text-shadow: 0 0 30px var(--green), 0 0 80px #00ff8870; }
+  }
+
+  .subtitle {
+    color: var(--dim);
+    font-size: 13px;
+    margin-bottom: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── OFFLINE BANNER ── */
+  #offline-banner {
+    display: none;
+    width: 100%;
+    max-width: 820px;
+    background: rgba(255, 159, 67, 0.15);
+    border: 1px solid rgba(255,159,67,0.4);
+    border-radius: 8px;
+    padding: 6px 14px;
+    text-align: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--orange);
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+  #offline-banner.show { display: block; }
+
+  /* ── INSTALL BUTTON ── */
+  #btn-install {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 16px;
+    z-index: 100;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 2px solid var(--green);
+    background: #0d3320;
+    color: var(--green);
+    cursor: pointer;
+    line-height: 1.7;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  #btn-install:hover { background: var(--green); color: #000; }
+  #btn-install.show  { display: block; }
+
+  .game-wrapper {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 820px;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Side Panel ── */
+  .side-panel {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 14px;
+    min-width: 155px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+
+  .stat-box { text-align: center; }
+  .stat-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .stat-value {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    color: var(--yellow);
+    text-shadow: 0 0 12px var(--yellow);
+  }
+
+  .lives-display {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    font-size: 20px;
+  }
+
+  .level-badge {
+    background: linear-gradient(135deg, #1a1a4a, #2a1a5a);
+    border: 2px solid var(--purple);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+  }
+  .level-badge .label { font-size: 9px; color: var(--purple); font-weight: 900; letter-spacing: 2px; }
+  .level-badge .name  { font-size: 14px; font-weight: 900; color: var(--white); margin-top: 2px; }
+
+  .streak-bar {
+    background: #1a1000;
+    border: 2px solid #ff9f4360;
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+  }
+  .streak-label { font-size: 10px; color: var(--orange); font-weight: 900; letter-spacing: 1px; }
+  .streak-value {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    color: var(--orange);
+    text-shadow: 0 0 10px var(--orange);
+  }
+
+  /* ── Center area ── */
+  .center-area {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    max-width: 440px;
+  }
+
+  /* CRONÔMETRO BARRA */
+  .timer-container {
+    width: 100%; height: 6px; background: #1a1a44; border-radius: 3px; overflow: hidden; margin-bottom: -5px;
+  }
+  #timer-bar { width: 100%; height: 100%; background: var(--blue); transition: width 0.1s linear; }
+
+  .question-bar {
+    background: linear-gradient(135deg, #0d0d2e, #1a1a44);
+    border: 2px solid var(--blue);
+    border-radius: 12px;
+    padding: 12px 18px;
+    text-align: center;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px #4dc8ff20;
+  }
+  .question-label {
+    font-size: 10px;
+    color: var(--blue);
+    font-weight: 900;
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+  }
+  .question-text {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(14px, 3.5vw, 24px);
+    color: var(--white);
+    text-shadow: 0 0 18px var(--blue);
+  }
+
+  .canvas-container {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 40px #00ff8820, 0 0 80px #00ff8810;
+    border: 3px solid var(--green);
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+  }
+
+  .feedback-text {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 13px;
+    position: absolute;
+    top: 44%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.15s;
+    text-shadow: 0 0 20px currentColor;
+    white-space: nowrap;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 22, 0.93);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 10;
+  }
+
+  .diff-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    align-items: center;
+  }
+
+  .diff-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    width: 210px;
+    text-align: center;
+    line-height: 1.8;
+    transition: all 0.15s;
+  }
+  .diff-easy   { background: #0d3320; color: var(--green);  border-color: var(--green); }
+  .diff-easy:hover   { background: var(--green);  color: #000; transform: scale(1.04); }
+  .diff-medium { background: #33280d; color: var(--yellow); border-color: var(--yellow); }
+  .diff-medium:hover { background: var(--yellow); color: #000; transform: scale(1.04); }
+  .diff-hard   { background: #330d18; color: var(--red);    border-color: var(--red); }
+  .diff-hard:hover   { background: var(--red);    color: #fff; transform: scale(1.04); }
+
+  .mobile-controls {
+    display: none;
+    margin-top: 14px;
+    gap: 8px;
+    flex-direction: column;
+    align-items: center;
+    z-index: 1;
+  }
+  .mc-row { display: flex; gap: 8px; }
+  .mc-btn {
+    width: 54px; height: 54px;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    color: var(--white);
+  }
+
+  @media (max-width: 620px) {
+    .side-panel { display: none; }
+    .game-wrapper { flex-direction: column; align-items: center; }
+    .mobile-controls { display: flex; }
+    .center-area { max-width: 98vw; }
+  }
+
+  .dev-footer {
+    margin-top: 20px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--dim);
+    text-align: center;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding-bottom: 20px;
+    z-index: 1;
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+
+<div id="pc-blocker">
+  <div style="font-size: 40px;">📱</div>
+  <p style="margin-top:20px; font-size:12px; line-height:1.6">JOGO EXCLUSIVO PARA<br>DISPOSITIVOS MÓVEIS</p>
+</div>
+
+<div id="offline-banner">📡 MODO OFFLINE — RECORDES SALVOS LOCALMENTE</div>
+
+<h1>🐍 SNAKE MATEMÁTICO</h1>
+<div class="subtitle">Come a resposta certa e cresça!</div>
+
+<div class="game-wrapper">
+
+  <div class="side-panel">
+    <div class="stat-box">
+      <div class="stat-label">Pontos</div>
+      <div class="stat-value" id="score">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Recorde</div>
+      <div class="stat-value" id="highscore" style="color:var(--purple);text-shadow:0 0 12px var(--purple)">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Vidas</div>
+      <div class="lives-display" id="lives">❤️❤️❤️</div>
+    </div>
+    <div class="streak-bar">
+      <div class="streak-label">🔥 SEQUÊNCIA</div>
+      <div class="streak-value" id="streak">0</div>
+    </div>
+    <div class="level-badge">
+      <div class="label">NÍVEL</div>
+      <div class="name" id="level-name">—</div>
+    </div>
+  </div>
+
+  <div class="center-area">
+    <div class="timer-container"><div id="timer-bar"></div></div>
+    <div class="question-bar">
+      <div class="question-label">🧮 QUANTO É?</div>
+      <div class="question-text" id="question">—</div>
+    </div>
+
+    <div class="canvas-container">
+      <canvas id="gameCanvas" width="440" height="396"></canvas>
+      <div class="feedback-text" id="feedback"></div>
+
+      <div class="overlay" id="overlay">
+        <h2 style="color:var(--green)">🐍 SNAKE<br>MATEMÁTICO</h2>
+        <p>Come o número <strong style="color:var(--green)">correto</strong> e cresça!<br>Evite as respostas <strong style="color:var(--red)">erradas</strong>!</p>
+        <div class="diff-btns">
+          <button class="diff-btn diff-easy" onclick="startGame('easy')">😊 FÁCIL</button>
+          <button class="diff-btn diff-medium" onclick="startGame('medium')">🤓 MÉDIO</button>
+          <button class="diff-btn diff-hard" onclick="startGame('hard')">🔥 DIFÍCIL</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mobile-controls" id="mobileControls">
+  <div class="mc-row"><button class="mc-btn" id="btn-up">▲</button></div>
+  <div class="mc-row">
+    <button class="mc-btn" id="btn-left">◀</button>
+    <button class="mc-btn" id="btn-down">▼</button>
+    <button class="mc-btn" id="btn-right">▶</button>
+  </div>
+</div>
+
+<button id="btn-install" onclick="installApp()">⬇️ INSTALAR<br>COMO APP</button>
+
+<div class="dev-footer">Desenvolvido por Sebastião Alves de Almeida</div>
+
+<script>
+// ── SISTEMA DE ÁUDIO ──
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(freq, type, duration, vol = 0.1) {
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+}
+const SFX = {
+    correct: () => { playSound(600, 'sine', 0.2); setTimeout(() => playSound(900, 'sine', 0.2), 100); },
+    wrong: () => { playSound(150, 'sawtooth', 0.4); },
+    level: () => { [400, 500, 600, 800].forEach((f, i) => setTimeout(() => playSound(f, 'square', 0.3), i*100)); }
+};
+
+// ── CONFIGURAÇÃO ORIGINAL ──
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+const COLS = 22, ROWS = 18;
+const CW = canvas.width / COLS;
+const CH = canvas.height / ROWS;
+
+let snake, dir, nextDir, items, score, lives, streak, gameLevel = 1;
+let highscore = 0, currentQ, difficulty, paused, dead, animId;
+let moveTimer = 0, moveInterval = 200, lastTime = null;
+let levelTimer, maxLevelTime = 15;
+
+const COLORS = {
+  easy:   { head: '#00ff88', body: '#00bb66', glow: '#00ff8870' },
+  medium: { head: '#ffe94d', body: '#ccaa00', glow: '#ffe94d70' },
+  hard:   { head: '#ff4d6d', body: '#cc1144', glow: '#ff4d6d70' },
+};
+const LEVEL_NAMES = { easy: '😊 FÁCIL', medium: '🤓 MÉDIO', hard: '🔥 DIFÍCIL' };
+const ITEM_PALETTE = ['#4dc8ff','#ff9f43','#c084fc','#f472b6'];
+
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function generateQuestion(diff) {
+  let a, b, op, answer, display;
+  if (diff === 'easy') {
+    op = Math.random() < 0.5 ? '+' : '-';
+    a  = rand(2, 18); b = op === '-' ? rand(1, a) : rand(1, 18);
+    answer = op === '+' ? a + b : a - b;
+    display = `${a} ${op} ${b}`;
+  } else if (diff === 'medium') {
+    const ops = ['+','-','×','÷'];
+    op = ops[Math.floor(Math.random() * ops.length)];
+    if (op === '×') { a = rand(2, 12); b = rand(2, 12); answer = a * b; }
+    else if (op === '÷') { b = rand(2, 10); answer = rand(2, 10); a = b * answer; }
+    else if (op === '+') { a = rand(15, 60); b = rand(15, 60); answer = a + b; }
+    else { a = rand(25, 90); b = rand(1, a - 1); answer = a - b; }
+    display = `${a} ${op} ${b}`;
+  } else {
+    const types = ['pow2','pow3','sqrt','pct'];
+    const t = types[Math.floor(Math.random() * types.length)];
+    if (t === 'pow2') { a = rand(2, 12); answer = a * a; display = `${a}²`; }
+    else if (t === 'sqrt') { const opts = [16,25,36,49,64,81,100]; a = opts[rand(0,6)]; answer = Math.sqrt(a); display = `√${a}`; }
+    else if (t === 'pct') { b = 50; a = rand(2,10)*10; answer = (a*b)/100; display = `${b}% de ${a}`; }
+    else { a = rand(2,5); b = rand(2,5); answer = a*b+2; display = `${a}×${b}+2`; }
+  }
+  return { display, answer: Math.round(answer) };
+}
+
+function generateWrongAnswers(correct) {
+  const set = new Set();
+  while (set.size < 3) {
+    let off = rand(1, 5); if (Math.random() < 0.5) off = -off;
+    const w = correct + off; if (w !== correct && w >= 0) set.add(w);
+  }
+  return [...set];
+}
+
+function freeCell(exclude = []) {
+  const occ = new Set([...snake.map(s => `${s.x},${s.y}`), ...exclude.map(e => `${e.x},${e.y}`)]);
+  let cell; do { cell = { x: rand(0, COLS-1), y: rand(0, ROWS-1) }; } while (occ.has(`${cell.x},${cell.y}`));
+  return cell;
+}
+
+function spawnItems() {
+  const q = generateQuestion(difficulty);
+  currentQ = q;
+  levelTimer = maxLevelTime;
+  document.getElementById('question').textContent = q.display + ' = ?';
+  const wrongs = generateWrongAnswers(q.answer);
+  const all = [{ val: q.answer, correct: true }, ...wrongs.map(w => ({ val: w, correct: false }))].sort(() => Math.random() - 0.5);
+  items = [];
+  all.forEach(a => { const pos = freeCell(items); items.push({ ...pos, val: a.val, correct: a.correct }); });
+}
+
+function updateUI() {
+  document.getElementById('score').textContent = score;
+  document.getElementById('highscore').textContent = highscore;
+  document.getElementById('streak').textContent = streak;
+  document.getElementById('lives').textContent = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(Math.max(0, 3 - lives));
+}
+
+function startGame(diff) {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  difficulty = diff;
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('level-name').textContent = LEVEL_NAMES[diff];
+  snake = [{ x:11, y:9 }, { x:10, y:9 }, { x:9, y:9 }];
+  dir = { x:1, y:0 }; nextDir = { x:1, y:0 };
+  score = 0; lives = 3; streak = 0; gameLevel = 1;
+  highscore = parseInt(localStorage.getItem('snakeHS_' + diff) || '0');
+  paused = false; dead = false;
+  moveInterval = diff === 'easy' ? 210 : diff === 'medium' ? 165 : 130;
+  moveTimer = 0;
+  updateUI(); spawnItems();
+  if (animId) cancelAnimationFrame(animId);
+  lastTime = null; animId = requestAnimationFrame(loop);
+}
+
+function loop(ts) {
+  if (!lastTime) lastTime = ts;
+  const dt = ts - lastTime;
+  lastTime = ts;
+  if (!paused && !dead) {
+    levelTimer -= dt/1000;
+    document.getElementById('timer-bar').style.width = (levelTimer/maxLevelTime)*100 + "%";
+    if(levelTimer <= 0) { loseLife("TEMPO ESGOTADO!"); }
+
+    moveTimer += dt;
+    if (moveTimer >= moveInterval) { moveTimer = 0; update(); }
+  }
+  draw();
+  if (!dead) animId = requestAnimationFrame(loop);
+}
+
+function update() {
+  dir = { ...nextDir };
+  const head = { x: (snake[0].x + dir.x + COLS) % COLS, y: (snake[0].y + dir.y + ROWS) % ROWS };
+  if (snake.some(s => s.x === head.x && s.y === head.y)) { loseLife("COLISÃO!"); return; }
+  snake.unshift(head);
+
+  const hit = items.findIndex(i => i.x === head.x && i.y === head.y);
+  if (hit !== -1) {
+    const item = items[hit];
+    if (item.correct) {
+      SFX.correct();
+      score += 10 * (streak + 1); streak++;
+      if (score > highscore) {
+        highscore = score;
+        localStorage.setItem('snakeHS_' + difficulty, highscore);
+      }
+      if (score % 50 === 0) {
+        gameLevel++; lives = Math.min(lives + 1, 3); SFX.level();
+        showFeedback("LEVEL UP! +❤️", "var(--purple)");
+      } else {
+        showFeedback('✓ CORRETO', '#00ff88');
+      }
+      updateUI(); spawnItems();
+    } else {
+      loseLife("ERRADO!");
+    }
+  } else { snake.pop(); }
+}
+
+function loseLife(msg) {
+  SFX.wrong();
+  lives--; streak = 0;
+  showFeedback(msg, '#ff4d6d');
+  updateUI();
+  if (lives <= 0) { gameOver(); return; }
+  snake = [{ x:11, y:9 }, { x:10, y:9 }, { x:9, y:9 }];
+  dir = { x:1, y:0 }; nextDir = { x:1, y:0 };
+  spawnItems();
+}
+
+function gameOver() {
+  dead = true;
+  const ov = document.getElementById('overlay');
+  ov.style.display = 'flex';
+  ov.innerHTML = `<h2 style="color:var(--red)">💀 FIM DE JOGO!</h2>
+    <div style="text-align:center"><div class="stat-value" style="font-size:30px">${score}</div><div style="color:var(--dim)">PONTOS</div></div>
+    <button class="diff-btn diff-easy" onclick="location.reload()">🔄 REINICIAR</button>`;
+}
+
+let feedbackTimer = null;
+function showFeedback(text, color) {
+  const el = document.getElementById('feedback');
+  el.textContent = text; el.style.color = color; el.style.opacity = '1';
+  if (feedbackTimer) clearTimeout(feedbackTimer);
+  feedbackTimer = setTimeout(() => { el.style.opacity = '0'; }, 900);
+}
+
+function draw() {
+  const c = COLORS[difficulty] || COLORS.easy;
+  ctx.fillStyle = '#08081a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (items) {
+    items.forEach((item, i) => {
+      const color = item.correct ? '#00ff88' : ITEM_PALETTE[i % ITEM_PALETTE.length];
+      ctx.fillStyle = color;
+      ctx.font = `900 16px Nunito`;
+      ctx.textAlign = 'center';
+      ctx.fillText(item.val, item.x * CW + CW/2, item.y * CH + CH/2 + 5);
+    });
+  }
+
+  snake.forEach((seg, i) => {
+    ctx.fillStyle = i === 0 ? c.head : c.body;
+    ctx.fillRect(seg.x * CW + 1, seg.y * CH + 1, CW - 2, CH - 2);
+  });
+
+  if (paused) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'white';
+    ctx.font = "12px 'Press Start 2P'";
+    ctx.fillText("PAUSADO", canvas.width/2, canvas.height/2);
+  }
+}
+
+// CONTROLES
+document.addEventListener('keydown', e => {
+  if (['ArrowUp','w'].includes(e.key) && dir.y !== 1) nextDir = { x:0, y:-1 };
+  if (['ArrowDown','s'].includes(e.key) && dir.y !== -1) nextDir = { x:0, y:1 };
+  if (['ArrowLeft','a'].includes(e.key) && dir.x !== 1) nextDir = { x:-1, y:0 };
+  if (['ArrowRight','d'].includes(e.key) && dir.x !== -1) nextDir = { x:1, y:0 };
+  if (e.key.toLowerCase() === 'p') paused = !paused;
+});
+
+function bindMobileBtn(id, dx, dy) {
+  const btn = document.getElementById(id);
+  btn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (dir.x !== -dx || dir.y !== -dy) nextDir = { x:dx, y:dy };
+  });
+}
+bindMobileBtn('btn-up', 0, -1); bindMobileBtn('btn-down', 0, 1);
+bindMobileBtn('btn-left', -1, 0); bindMobileBtn('btn-right', 1, 0);
+
+// ════════════════════════════════════════════════
+// SERVICE WORKER & PWA
+// ════════════════════════════════════════════════
+let deferredPrompt = null;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./snake-sw.js')
+      .then(reg => { console.log('Snake SW registrado! Escopo:', reg.scope); reg.update(); })
+      .catch(err => console.warn('SW falhou:', err));
+  });
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('btn-install').classList.add('show');
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  document.getElementById('btn-install').classList.remove('show');
+});
+
+async function installApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('btn-install').classList.remove('show');
+}
+
+function updateOnlineStatus() {
+  document.getElementById('offline-banner').classList.toggle('show', !navigator.onLine);
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+</script>
+</body>
+</html>

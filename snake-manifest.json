@@ -1,0 +1,27 @@
+{
+  "name": "Snake Matemático",
+  "short_name": "Snake Mat.",
+  "description": "Jogo de Snake educativo! Come o número correto para crescer e aprender matemática.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#00ff88",
+  "orientation": "portrait",
+  "lang": "pt-BR",
+  "categories": ["games", "education"],
+  "icons": [
+    {
+      "src": "snake-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "snake-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
